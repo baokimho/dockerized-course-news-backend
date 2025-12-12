@@ -134,24 +134,40 @@ class AuthController {
 
             await user.save();
 
-            // Send reset email
-            const resetUrl = `https://yourdomain.com/auth/reset-password?token=${token}`;
+            // Build reset URL based on configured app URL or current host
+            const appUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+            const resetUrl = `${appUrl}/auth/reset-password?token=${token}`;
+
+            // Allow disabling email in local/dev to avoid SMTP timeouts
+            const mailDisabled = process.env.MAIL_DISABLE === 'true' || !process.env.SMTP_HOST;
+            if (mailDisabled) {
+                console.log(`[mail disabled] Password reset link for ${user.email}: ${resetUrl}`);
+                return res.render('auth/reset', { error: 'If an account with that email exists, a reset link has been sent.', email: '' });
+            }
 
             const transporter = nodemailer.createTransport({
-            host: "smtp.your-email.com",
-            port: 587,
-            auth: {
-                user: "your-smtp-user",
-                pass: "your-smtp-password"
-            }
+                host: process.env.SMTP_HOST,
+                port: Number(process.env.SMTP_PORT || 587),
+                secure: process.env.SMTP_SECURE === 'true',
+                auth: (process.env.SMTP_USER && process.env.SMTP_PASS) ? {
+                    user: process.env.SMTP_USER,
+                    pass: process.env.SMTP_PASS,
+                } : undefined,
+                connectionTimeout: Number(process.env.SMTP_TIMEOUT_MS || 5000),
+                socketTimeout: Number(process.env.SMTP_SOCKET_TIMEOUT_MS || 5000),
             });
 
-            await transporter.sendMail({
-            from: '"CourseSub" <no-reply@gmail.com>',
-            to: user.email,
-            subject: "Password Reset",
-            text: `You requested a password reset. Click the link below to reset your password:\n\n${resetUrl}`
-            });
+            try {
+                await transporter.sendMail({
+                    from: process.env.MAIL_FROM || '"CourseSub" <no-reply@example.com>',
+                    to: user.email,
+                    subject: "Password Reset",
+                    text: `You requested a password reset. Click the link below to reset your password:\n\n${resetUrl}`
+                });
+            } catch (mailError) {
+                console.error('Failed to send reset email:', mailError);
+                return res.render('auth/reset', { error: 'Could not send reset email right now. Please try again later.', email: rawEmail });
+            }
 
             return res.render('auth/reset', { error: 'If an account with that email exists, a reset link has been sent.', email: '' });
 
