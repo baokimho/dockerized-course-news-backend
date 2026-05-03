@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 require('dotenv').config();
+const { seedDatabase } = require('./seed');
 
 async function connect(){
     try{
@@ -7,6 +8,7 @@ async function connect(){
         console.log('Connecting to MongoDB at', db_uri);
         await mongoose.connect(db_uri);
         console.log('Database connected successfully');
+        await seedDatabase();
     } catch (error) {
         console.error('Database connection error:', error);
         throw new Error('Failed to connect to the database');

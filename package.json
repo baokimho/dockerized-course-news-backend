@@ -22,6 +22,7 @@
   "scripts": {
     "beautiful": "lint-staged",
     "start": "nodemon --inspect src/index.js",
+    "seed": "node scripts/seed.js",
     "test": "jest --runInBand",
     "watch": "sass --watch src/resources/scss/:src/resources/public/css/"
   },

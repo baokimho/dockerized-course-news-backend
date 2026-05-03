@@ -1,28 +1,27 @@
 services:
   mongo:
     image: mongo:7
-    ports:
-      - "27017:27017"
     volumes:
       - mongo-data:/data/db
 
   backend:
     build: .
-    image: bken824/my-backend-app:1.1 # Add this line to push the image to Docker Hub
-    command: sh -c "npm install && npm run start"
+    image: bken824/my-backend-app:1.1
     ports:
       - "3000:3000"
     environment:
       - MONGO_URI=mongodb://mongo:27017/baokim_dev
-      - MONGO_URL=mongodb://mongo:27017/baokim_dev
-      - SESSION_SECRET=change_this_secret
+      - SESSION_SECRET=${SESSION_SECRET}
       - PORT=3000
       - NODE_ENV=development
+      - AUTO_SEED=true
+      - SEED_DEMO_CONTENT=true
+      - SEED_ADMIN_NAME=Demo Admin
+      - SEED_ADMIN_EMAIL=admin@demo.local
+      - SEED_ADMIN_PASSWORD=Admin123
+      - SEED_ADMIN_RESET_PASSWORD=false
     depends_on:
       - mongo
-    volumes:
-      - .:/app
-      - /app/node_modules
 
 volumes:
   mongo-data:
