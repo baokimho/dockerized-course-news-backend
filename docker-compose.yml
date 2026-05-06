@@ -3,10 +3,16 @@ services:
     image: mongo:7
     volumes:
       - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --eval 'db.adminCommand(\"ping\").ok' --quiet"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   backend:
     build: .
-    image: bken824/my-backend-app:1.1
+    image: bken824/my-backend-app:dev
     ports:
       - "3000:3000"
     environment:
@@ -21,7 +27,8 @@ services:
       - SEED_ADMIN_PASSWORD=Admin123
       - SEED_ADMIN_RESET_PASSWORD=false
     depends_on:
-      - mongo
+      mongo:
+        condition: service_healthy
 
 volumes:
   mongo-data:
