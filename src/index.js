@@ -8,7 +8,6 @@ const User = require('./app/models/User');
 const helmet = require('helmet');
 const csrf = require('csurf');
 const isTest = process.env.NODE_ENV === 'test';
-const sass = require('sass');
 const path = require('path');
 const handlebars = require('express-handlebars');
 const methodOverride = require('method-override');
@@ -20,6 +19,10 @@ dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
+
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok' });
+});
 
 // Security headers with CSP allowing YouTube, Bootstrap CDN, jQuery CDN
 app.use(
@@ -64,10 +67,12 @@ app.use(
         secret: process.env.SESSION_SECRET || 'change_this_secret',
         resave: false,
         saveUninitialized: false,
-        store: MongoStore.create({
-            mongoUrl: process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/baokim_dev',
-            ttl: 24 * 60 * 60, // 1 day
-        }),
+        store: isTest
+            ? undefined
+            : MongoStore.create({
+                  mongoUrl: process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/baokim_dev',
+                  ttl: 24 * 60 * 60, // 1 day
+              }),
         cookie: {
             maxAge: 1000 * 60 * 60 * 24, // 1 day
             sameSite: 'lax',
