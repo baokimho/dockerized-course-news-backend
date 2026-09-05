@@ -1,34 +1,73 @@
 services:
   mongo:
     image: mongo:7
+    restart: unless-stopped
     volumes:
       - mongo-data:/data/db
+    networks:
+      - backend
     healthcheck:
       test: ["CMD-SHELL", "mongosh --eval 'db.adminCommand(\"ping\").ok' --quiet"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
 
   backend:
-    build: .
-    image: bken824/my-backend-app:dev
+    build:
+      context: .
+      target: runner
+    image: course-management-app:local
+    restart: unless-stopped
+    init: true
     ports:
-      - "3000:3000"
+      - "${APP_PORT:-3000}:3000"
     environment:
-      - MONGO_URI=mongodb://mongo:27017/baokim_dev
-      - SESSION_SECRET=${SESSION_SECRET}
-      - PORT=3000
-      - NODE_ENV=development
-      - AUTO_SEED=true
-      - SEED_DEMO_CONTENT=true
-      - SEED_ADMIN_NAME=Demo Admin
-      - SEED_ADMIN_EMAIL=admin@demo.local
-      - SEED_ADMIN_PASSWORD=Admin123
-      - SEED_ADMIN_RESET_PASSWORD=false
+      MONGO_URI: ${APP_MONGO_URI:-mongodb://mongo:27017/baokim_prod}
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required}
+      PORT: 3000
+      NODE_ENV: production
+      AUTO_SEED: ${AUTO_SEED:-false}
+      SEED_DEMO_CONTENT: ${SEED_DEMO_CONTENT:-false}
+      SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-Demo Admin}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@demo.local}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
+      SEED_ADMIN_RESET_PASSWORD: ${SEED_ADMIN_RESET_PASSWORD:-false}
     depends_on:
       mongo:
         condition: service_healthy
+    networks:
+      - backend
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"require('http').get('http://127.0.0.1:3000/', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))\"",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
 
 volumes:
   mongo-data:
+
+networks:
+  backend:
+    driver: bridge

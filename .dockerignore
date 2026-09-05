@@ -1,0 +1,14 @@
+.git
+.github
+.codegraph
+node_modules
+npm-debug.log
+Dockerfile
+docker-compose*.yml
+.dockerignore
+.env
+.env.*
+__tests__
+coverage
+docs
+test-mongoose-delete.js
